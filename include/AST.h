@@ -19,6 +19,9 @@ public:
     virtual ~Node() {}
     explicit Node() {}
 
+public:
+    virtual std::string toString(size_t level = 0) const noexcept = 0;
+
 private:
     template <typename NodeType>
     inline NodeType *setPosition(ssize_t pos)
@@ -42,7 +45,6 @@ struct RegExp;
 struct Section;
 struct Elementry;
 
-struct Item;
 struct Range;
 struct SubExpr;
 struct Character;
@@ -52,22 +54,31 @@ struct Character;
 struct RegExp final : public Node
 {
     std::vector<std::shared_ptr<Section>> sections;
+
+public:
+    virtual std::string toString(size_t level) const noexcept;
+
 };
 
 struct Section final : public Node
 {
     std::vector<std::shared_ptr<Elementry>> elements;
+
+public:
+    virtual std::string toString(size_t level) const noexcept;
+
 };
 
 struct Elementry final : public Node
 {
     enum class Type : int
     {
-        Any,
-        Set,
-        Group,
-        Character,
-        EndOfString,
+        ElementryAny,
+        ElementryRange,
+        ElementrySubExpr,
+        ElementryCharacter,
+        ElementryEndOfString,
+        ElementryStartOfString,
     };
 
 public:
@@ -75,15 +86,15 @@ public:
     {
         enum class Type : int
         {
-            None,
-            Plus,
-            Star,
-            Repeat,
-            Question,
+            ModifierNone,
+            ModifierPlus,
+            ModifierStar,
+            ModifierRepeat,
+            ModifierQuestion,
         };
 
     public:
-        Type type = Type::None;
+        Type type = Type::ModifierNone;
         bool isLazy = false;
 
     public:
@@ -98,31 +109,42 @@ public:
 
 public:
     std::shared_ptr<Range> range;
+    std::shared_ptr<SubExpr> subexpr;
     std::shared_ptr<Character> character;
+
+public:
+    virtual std::string toString(size_t level) const noexcept;
 
 };
 
 struct Range final : public Node
 {
     bool isInverted = false;
-    std::vector<std::pair<wchar_t, wchar_t>> items;
+    std::vector<std::pair<std::shared_ptr<Character>, std::shared_ptr<Character>>> items;
+
+public:
+    virtual std::string toString(size_t level) const noexcept;
+
 };
 
 struct SubExpr final : public Node
 {
     enum class Type : int
     {
-        Simple,
-        NonCapture,
-        PositiveAssert,
-        NegativeAssert,
-        ReversePositiveAssert,
-        ReverseNegativeAssert,
+        SubExprSimple,
+        SubExprNonCapture,
+        SubExprPositiveLookahead,
+        SubExprNegativeLookahead,
+        SubExprPositiveLookbehind,
+        SubExprNegativeLookbehind,
     };
 
 public:
     Type type;
     std::shared_ptr<RegExp> expr;
+
+public:
+    virtual std::string toString(size_t level) const noexcept;
 
 };
 
@@ -130,25 +152,33 @@ struct Character final : public Node
 {
     enum class Type : int
     {
-        Group,
-        Simple,
+        CharacterGroup,
+        CharacterSimple,
+        CharacterControl,
 
-        Word,
-        Digit,
-        Space,
-        Border,
-        Control,
+        CharacterWord,
+        CharacterDigit,
+        CharacterSpace,
+        CharacterBorder,
 
-        NonWord,
-        NonDigit,
-        NonSpace,
-        NonBorder,
+        CharacterNonWord,
+        CharacterNonDigit,
+        CharacterNonSpace,
+        CharacterNonBorder,
     };
 
 public:
     Type type;
-    size_t group;
-    wchar_t character;
+
+public:
+    union
+    {
+        size_t group;
+        char32_t character;
+    };
+
+public:
+    virtual std::string toString(size_t level) const noexcept;
 
 };
 }

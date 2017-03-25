@@ -23,9 +23,12 @@ include_directories(${INSTALL_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(FAST_REG_EXP
+        src/AST.cpp
         src/Parser.cpp
         include/AST.h
-        include/Parser.h)
+        include/Parser.h
+        include/SyntaxError.h
+        include/Unicode.h)
 
 add_executable(FastRegExp ${FAST_REG_EXP} src/main.cpp)
 add_dependencies(FastRegExp libasmjit)
