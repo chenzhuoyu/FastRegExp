@@ -212,22 +212,19 @@ std::shared_ptr<AST::Character> Parser::parseCharacter(void)
 
             case U'c':
             {
-                switch ((ch = next()))
+                switch (peek())
                 {
-                    case 0:
-                        throw SyntaxError(_pos, "\"EOF\" when parsing control characters");
-
                     case U'a' ... U'z':
                     {
                         result->type = AST::Character::Type::CharacterControl;
-                        result->character = ch - U'a' + 1;
+                        result->character = next() - U'a' + 1;
                         break;
                     }
 
                     case U'A' ... U'Z':
                     {
                         result->type = AST::Character::Type::CharacterControl;
-                        result->character = ch - U'A' + 1;
+                        result->character = next() - U'A' + 1;
                         break;
                     }
 
