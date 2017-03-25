@@ -1,0 +1,3 @@
+[submodule "thirdparty/asmjit"]
+	path = thirdparty/asmjit
+	url = https://github.com/asmjit/asmjit
