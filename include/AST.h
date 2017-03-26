@@ -135,6 +135,7 @@ struct SubExpr final : public Node
     enum class Type : int
     {
         SubExprSimple,
+        SubExprReference,
         SubExprNonCapture,
         SubExprPositiveLookahead,
         SubExprNegativeLookahead,
@@ -155,9 +156,9 @@ struct Character final : public Node
 {
     enum class Type : int
     {
-        CharacterGroup,
         CharacterSimple,
         CharacterControl,
+        CharacterReference,
 
         CharacterWord,
         CharacterDigit,
@@ -174,11 +175,8 @@ public:
     Type type;
 
 public:
-    union
-    {
-        size_t group;
-        char32_t character;
-    };
+    char32_t character;
+    std::shared_ptr<RegExp> reference;
 
 public:
     virtual std::string toString(size_t level) const noexcept;

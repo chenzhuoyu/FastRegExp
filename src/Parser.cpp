@@ -25,27 +25,48 @@ size_t Parser::parseInt(void)
     }
 }
 
-std::shared_ptr<AST::RegExp> Parser::parseRegExp(void)
+std::shared_ptr<AST::RegExp> Parser::parseRegExp(char32_t delim)
 {
-    /* result `RegExp` node */
+    char32_t ch;
     std::shared_ptr<AST::RegExp> result = AST::Node::create<AST::RegExp>(_pos);
 
-    /* parse each section, splitted by "|" */
-    do result->sections.push_back(parseSection());
-    while (skipIf<U'|'>());
-
-    return result;
-}
-
-std::shared_ptr<AST::Section> Parser::parseSection(void)
-{
-    /* result `Section` node */
-    std::shared_ptr<AST::Section> result = AST::Node::create<AST::Section>(_pos);
-
-    /* parse each element */
     for (;;)
     {
-        switch (peek())
+        /* parse one section */
+        result->sections.push_back(parseSection(delim));
+
+        /* splitted by '|' or custom delimeter */
+        switch ((ch = peek()))
+        {
+            case 0:
+                return result;
+
+            case U'|':
+            {
+                next();
+                break;
+            }
+
+            default:
+            {
+                if (ch != delim)
+                    break;
+                else
+                    return result;
+            }
+        }
+    }
+}
+
+std::shared_ptr<AST::Section> Parser::parseSection(char32_t delim)
+{
+    char32_t ch;
+    std::shared_ptr<AST::Section> result = AST::Node::create<AST::Section>(_pos);
+
+    for (;;)
+    {
+        /* splitted by '|' or custom delimeter */
+        switch ((ch = peek()))
         {
             case 0:
             case U'|':
@@ -53,6 +74,10 @@ std::shared_ptr<AST::Section> Parser::parseSection(void)
 
             default:
             {
+                if (ch == delim)
+                    return result;
+
+                /* parse one element */
                 result->elements.push_back(parseElementry());
                 break;
             }
@@ -62,7 +87,6 @@ std::shared_ptr<AST::Section> Parser::parseSection(void)
 
 std::shared_ptr<AST::Elementry> Parser::parseElementry(void)
 {
-    /* result `Elementry` node */
     std::shared_ptr<AST::Elementry> result = AST::Node::create<AST::Elementry>(_pos);
 
     switch (peek())
@@ -172,8 +196,129 @@ std::shared_ptr<AST::Range> Parser::parseRange(void)
 
 std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
 {
-    // TODO: implement group parsing
-    return std::shared_ptr<AST::SubExpr>();
+    char32_t ch;
+    std::shared_ptr<AST::SubExpr> result = AST::Node::create<AST::SubExpr>(_pos);
+
+    if (next() != U'(')
+        throw SyntaxError(_pos, "'(' expected");
+
+    if (!skipIf<U'?'>())
+    {
+        result->type = AST::SubExpr::Type::SubExprSimple;
+        result->expr = parseRegExp(U')');
+        _groups.push_back(result->expr);
+    }
+    else
+    {
+        switch ((ch = next()))
+        {
+            case U':':
+            {
+                result->type = AST::SubExpr::Type::SubExprNonCapture;
+                result->expr = parseRegExp(U')');
+                break;
+            }
+
+            case U'=':
+            {
+                result->type = AST::SubExpr::Type::SubExprPositiveLookahead;
+                result->expr = parseRegExp(U')');
+                break;
+            }
+
+            case U'!':
+            {
+                result->type = AST::SubExpr::Type::SubExprNegativeLookahead;
+                result->expr = parseRegExp(U')');
+                break;
+            }
+
+            case U'<':
+            {
+                switch ((ch = next()))
+                {
+                    case U'=':
+                    {
+                        result->type = AST::SubExpr::Type::SubExprPositiveLookbehind;
+                        result->expr = parseRegExp(U')');
+                        break;
+                    }
+
+                    case U'!':
+                    {
+                        result->type = AST::SubExpr::Type::SubExprNegativeLookbehind;
+                        result->expr = parseRegExp(U')');
+                        break;
+                    }
+
+                    default:
+                        throw SyntaxError(_pos, "Unknown look-behind instruction '" + Unicode::toString(ch) + "'");
+                }
+
+                break;
+            }
+
+            case U'P':
+            {
+                switch ((ch = next()))
+                {
+                    case U'=':
+                    {
+                        std::u32string name;
+                        std::unordered_map<std::u32string, std::shared_ptr<AST::RegExp>>::const_iterator iter;
+
+                        while (peek() != U')')
+                            name += next();
+
+                        if (name.empty())
+                            throw SyntaxError(_pos, "Empty group name");
+
+                        if ((iter = _namedGroups.find(name)) == _namedGroups.end())
+                            throw SyntaxError(_pos, "No such group named '" + Unicode::toString(name) + "'");
+
+                        result->type = AST::SubExpr::Type::SubExprReference;
+                        result->expr = iter->second;
+                        break;
+                    }
+
+                    case U'<':
+                    {
+                        char32_t c;
+                        std::u32string name;
+
+                        while ((c = next()) != U'>')
+                            name += c;
+
+                        if (name.empty())
+                            throw SyntaxError(_pos, "Empty group name");
+
+                        if (_namedGroups.find(name) != _namedGroups.end())
+                            throw SyntaxError(_pos, "Duplicated group name '" + Unicode::toString(name) + "'");
+
+                        result->type = AST::SubExpr::Type::SubExprSimple;
+                        result->expr = parseRegExp(U')');
+
+                        _groups.push_back(result->expr);
+                        _namedGroups.insert(std::make_pair(std::move(name), result->expr));
+                        break;
+                    }
+
+                    default:
+                        throw SyntaxError(_pos, "Unknown look-behind instruction '" + Unicode::toString(ch) + "'");
+                }
+
+                break;
+            }
+
+            default:
+                throw SyntaxError(_pos, "Unknown group command '" + Unicode::toString(ch) + "'");
+        }
+    }
+
+    if (next() != U')')
+        throw SyntaxError(_pos, "')' expected");
+
+    return result;
 }
 
 std::shared_ptr<AST::Character> Parser::parseCharacter(void)

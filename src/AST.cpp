@@ -124,6 +124,7 @@ std::string FastRegExp::AST::SubExpr::toString(size_t level) const noexcept
     switch (type)
     {
         case Type::SubExprSimple             : result += header(level + 1) + "Simple\n"            ; break;
+        case Type::SubExprReference          : result += header(level + 1) + "Reference\n"         ; break;
         case Type::SubExprNonCapture         : result += header(level + 1) + "NonCapture\n"        ; break;
         case Type::SubExprPositiveLookahead  : result += header(level + 1) + "PositiveLookahead\n" ; break;
         case Type::SubExprNegativeLookahead  : result += header(level + 1) + "NegativeLookahead\n" ; break;
@@ -151,14 +152,6 @@ std::string FastRegExp::AST::Character::toString(size_t level) const noexcept
         case Type::CharacterNonSpace  : result += "Non-Space\n" ; break;
         case Type::CharacterNonBorder : result += "Non-Border\n"; break;
 
-        case Type::CharacterGroup:
-        {
-            result += "Group ";
-            result += std::to_string(group);
-            result += "\n";
-            break;
-        }
-
         case Type::CharacterSimple:
         {
             result += "Simple '";
@@ -176,6 +169,13 @@ std::string FastRegExp::AST::Character::toString(size_t level) const noexcept
             result += "'(Hex: ";
             result += hex(character);
             result += ")\n";
+            break;
+        }
+
+        case Type::CharacterReference:
+        {
+            result += "Reference \n";
+            result += reference->toString(level + 1);
             break;
         }
     }
