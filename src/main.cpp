@@ -3,7 +3,7 @@
 
 int main(void)
 {
-    FastRegExp::Parser parser(R"regex((?P<asd>(hello)|(world))\g<2>)regex");
+    FastRegExp::Parser parser(R"regex((?P<123>.+)\41a)regex");
     std::cout << parser.parse()->toString() << std::endl;
     return 0;
 }

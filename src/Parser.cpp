@@ -23,21 +23,13 @@ size_t Parser::parseInt(void)
             throw SyntaxError(_pos, "Invalid digit '" + Unicode::toString(ch) + "'");
     }
 
-    for (;;)
+    while (isDigit(peek()))
     {
-        switch (peek())
-        {
-            case U'0' ... U'9':
-            {
-                x *= 10;
-                x += next() - U'0';
-                break;
-            }
-
-            default:
-                return x;
-        }
+        x *= 10;
+        x += next() - U'0';
     }
+
+    return x;
 }
 
 std::shared_ptr<AST::RegExp> Parser::parseRegExp(char32_t delim)
@@ -272,20 +264,18 @@ std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
 
             case U'1' ... U'9':
             {
-                size_t i = ch - U'0';
-                char32_t dc = peek();
+                size_t index = ch - U'0';
 
-                while (dc >= U'0' && dc <= U'9')
+                while (isDigit(peek()))
                 {
-                    i *= 10;
-                    i += next() - U'0';
-                    dc = peek();
+                    index *= 10;
+                    index += next() - U'0';
                 }
 
-                if (i > _groups.size())
-                    throw SyntaxError(_pos, "Invalid group number " + std::to_string(i));
+                if (index > _groups.size())
+                    throw SyntaxError(_pos, "Invalid group number " + std::to_string(index));
 
-                result->expr = _groups[i - 1];
+                result->expr = _groups[index - 1];
                 result->type = AST::SubExpr::Type::SubExprReference;
                 break;
             }
@@ -512,7 +502,7 @@ std::shared_ptr<AST::Character> Parser::parseCharacter(void)
                 while ((ch = next()) != delim)
                 {
                     name += ch;
-                    isInt &= (ch >= U'0' && ch <= U'9');
+                    isInt &= isDigit(ch);
 
                     if (isInt)
                     {
@@ -560,10 +550,41 @@ std::shared_ptr<AST::Character> Parser::parseCharacter(void)
                 break;
             }
 
-            case U'0' ... U'9':
+            case U'1' ... U'9':
             {
-                // FIXME: context-sensitive semantic here, try disambiguation and implement this feature
-                throw SyntaxError(_pos, "Group numbering / octal escaping sequence not implemented due to context-sensitive sematic");
+                if (!isDigit(peek()))
+                {
+                    if (ch - U'0' > _groups.size())
+                        throw SyntaxError(_pos, "Invalid group number " + Unicode::toString(ch));
+
+                    result->type = AST::Character::Type::CharacterMatchIndex;
+                    result->index = ch - U'0';
+                    break;
+                }
+
+                if (!isOctal(ch))
+                {
+                    result->type = AST::Character::Type::CharacterSimple;
+                    result->character = ch;
+                    break;
+                }
+
+                /* deliberately fall-through */
+                /* break; */
+            }
+
+            case U'0':
+            {
+                result->type = AST::Character::Type::CharacterSimple;
+                result->character = ch - U'0';
+
+                for (int i = 0; (i < 2) && isOctal(peek()); i++)
+                {
+                    result->character *= 8;
+                    result->character += next() - U'0';
+                }
+
+                break;
             }
 
             default:

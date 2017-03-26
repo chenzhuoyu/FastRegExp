@@ -27,6 +27,10 @@ private:
     size_t parseInt(void);
 
 private:
+    static inline bool isDigit(char32_t ch) noexcept { return ch >= U'0' && ch <= U'9'; }
+    static inline bool isOctal(char32_t ch) noexcept { return ch >= U'0' && ch <= U'7'; }
+
+private:
     inline char32_t peek(void) { return _pos < _regexp.length() ? _regexp[_pos  ] : 0; }
     inline char32_t next(void) { return _pos < _regexp.length() ? _regexp[_pos++] : 0; }
 
