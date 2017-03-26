@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 
 #include "AST.h"
 #include "Unicode.h"

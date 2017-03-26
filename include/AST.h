@@ -20,6 +20,9 @@ public:
     explicit Node() {}
 
 public:
+    ssize_t pos(void) const { return _pos; }
+
+public:
     virtual std::string toString(size_t level = 0) const noexcept = 0;
 
 private:
