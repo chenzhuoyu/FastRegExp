@@ -5,22 +5,37 @@ namespace FastRegExp
 {
 size_t Parser::parseInt(void)
 {
-    if (skipIf<U'0'>())
-        return 0;
+    size_t x;
+    char32_t ch;
 
-    for (size_t result = 0;;)
+    switch ((ch = next()))
+    {
+        case U'0':
+            return 0;
+
+        case U'1' ... U'9':
+        {
+            x = ch - U'0';
+            break;
+        }
+
+        default:
+            throw SyntaxError(_pos, "Invalid digit '" + Unicode::toString(ch) + "'");
+    }
+
+    for (;;)
     {
         switch (peek())
         {
             case U'0' ... U'9':
             {
-                result *= 10;
-                result += next() - U'0';
+                x *= 10;
+                x += next() - U'0';
                 break;
             }
 
             default:
-                return result;
+                return x;
         }
     }
 }
@@ -212,6 +227,9 @@ std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
     {
         switch ((ch = next()))
         {
+            case U'0':
+                throw SyntaxError(_pos, "Invalid group number 0");
+
             case U':':
             {
                 result->type = AST::SubExpr::Type::SubExprNonCapture;
@@ -230,6 +248,45 @@ std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
             {
                 result->type = AST::SubExpr::Type::SubExprNegativeLookahead;
                 result->expr = parseRegExp(U')');
+                break;
+            }
+
+            case U'&':
+            {
+                std::u32string name;
+                std::unordered_map<std::u32string, std::shared_ptr<AST::RegExp>>::const_iterator iter;
+
+                while (peek() != U')')
+                    name += next();
+
+                if (name.empty())
+                    throw SyntaxError(_pos, "Empty group name");
+
+                if ((iter = _namedGroups.find(name)) == _namedGroups.end())
+                    throw SyntaxError(_pos, "No such group named '" + Unicode::toString(name) + "'");
+
+                result->expr = iter->second;
+                result->type = AST::SubExpr::Type::SubExprReference;
+                break;
+            }
+
+            case U'1' ... U'9':
+            {
+                size_t i = ch - U'0';
+                char32_t dc = peek();
+
+                while (dc >= U'0' && dc <= U'9')
+                {
+                    i *= 10;
+                    i += next() - U'0';
+                    dc = peek();
+                }
+
+                if (i > _groups.size())
+                    throw SyntaxError(_pos, "Invalid group number " + std::to_string(i));
+
+                result->expr = _groups[i - 1];
+                result->type = AST::SubExpr::Type::SubExprReference;
                 break;
             }
 
@@ -276,8 +333,8 @@ std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
                         if ((iter = _namedGroups.find(name)) == _namedGroups.end())
                             throw SyntaxError(_pos, "No such group named '" + Unicode::toString(name) + "'");
 
-                        result->type = AST::SubExpr::Type::SubExprReference;
-                        result->expr = iter->second;
+                        result->name = iter->first;
+                        result->type = AST::SubExpr::Type::SubExprMatchName;
                         break;
                     }
 
@@ -304,7 +361,7 @@ std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
                     }
 
                     default:
-                        throw SyntaxError(_pos, "Unknown look-behind instruction '" + Unicode::toString(ch) + "'");
+                        throw SyntaxError(_pos, "Unknown group naming instruction '" + Unicode::toString(ch) + "'");
                 }
 
                 break;
@@ -430,6 +487,75 @@ std::shared_ptr<AST::Character> Parser::parseCharacter(void)
                 if (requireBracket)
                     if (next() != U'}')
                         throw SyntaxError(_pos, "'}' expected");
+
+                break;
+            }
+
+            case U'g':
+            {
+                char32_t delim;
+                std::u32string name;
+                std::unordered_map<std::u32string, std::shared_ptr<AST::RegExp>>::const_iterator iter;
+
+                switch (next())
+                {
+                    case U'{': delim = U'}'; break;
+                    case U'<': delim = U'>'; break;
+
+                    default:
+                        throw SyntaxError(_pos, "Unknonwn group matching instruction '" + Unicode::toString(ch) + "'");
+                }
+
+                bool isInt = true;
+                size_t index = 0;
+
+                while ((ch = next()) != delim)
+                {
+                    name += ch;
+                    isInt &= (ch >= U'0' && ch <= U'9');
+
+                    if (isInt)
+                    {
+                        index *= 10;
+                        index += ch - U'0';
+                    }
+                }
+
+                if (name.empty())
+                    throw SyntaxError(_pos, "Empty group name or index");
+
+                if (isInt)
+                {
+                    if (index > 0 && index <= _groups.size())
+                    {
+                        if (delim == U'>')
+                        {
+                            result->type = AST::Character::Type::CharacterReference;
+                            result->reference = _groups[index - 1];
+                        }
+                        else
+                        {
+                            result->type = AST::Character::Type::CharacterMatchIndex;
+                            result->index = index;
+                        }
+
+                        break;
+                    }
+                }
+
+                if ((iter = _namedGroups.find(name)) == _namedGroups.end())
+                    throw SyntaxError(_pos, "No such group named '" + Unicode::toString(name) + "'");
+
+                if (delim == U'>')
+                {
+                    result->type = AST::Character::Type::CharacterReference;
+                    result->reference = iter->second;
+                }
+                else
+                {
+                    result->name = name;
+                    result->type = AST::Character::Type::CharacterMatchName;
+                }
 
                 break;
             }

@@ -135,6 +135,7 @@ struct SubExpr final : public Node
     enum class Type : int
     {
         SubExprSimple,
+        SubExprMatchName,
         SubExprReference,
         SubExprNonCapture,
         SubExprPositiveLookahead,
@@ -145,6 +146,7 @@ struct SubExpr final : public Node
 
 public:
     Type type;
+    std::u32string name;
     std::shared_ptr<RegExp> expr;
 
 public:
@@ -156,10 +158,6 @@ struct Character final : public Node
 {
     enum class Type : int
     {
-        CharacterSimple,
-        CharacterControl,
-        CharacterReference,
-
         CharacterWord,
         CharacterDigit,
         CharacterSpace,
@@ -169,13 +167,24 @@ struct Character final : public Node
         CharacterNonDigit,
         CharacterNonSpace,
         CharacterNonBorder,
+
+        CharacterSimple,
+        CharacterControl,
+        CharacterReference,
+
+        CharacterMatchName,
+        CharacterMatchIndex,
     };
 
 public:
     Type type;
 
 public:
+    size_t index;
     char32_t character;
+
+public:
+    std::u32string name;
     std::shared_ptr<RegExp> reference;
 
 public:

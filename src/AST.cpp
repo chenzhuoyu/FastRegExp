@@ -123,16 +123,24 @@ std::string FastRegExp::AST::SubExpr::toString(size_t level) const noexcept
 
     switch (type)
     {
-        case Type::SubExprSimple             : result += header(level + 1) + "Simple\n"            ; break;
-        case Type::SubExprReference          : result += header(level + 1) + "Reference\n"         ; break;
-        case Type::SubExprNonCapture         : result += header(level + 1) + "NonCapture\n"        ; break;
-        case Type::SubExprPositiveLookahead  : result += header(level + 1) + "PositiveLookahead\n" ; break;
-        case Type::SubExprNegativeLookahead  : result += header(level + 1) + "NegativeLookahead\n" ; break;
-        case Type::SubExprPositiveLookbehind : result += header(level + 1) + "PositiveLookbehind\n"; break;
-        case Type::SubExprNegativeLookbehind : result += header(level + 1) + "NegativeLookbehind\n"; break;
+        case Type::SubExprSimple             : result += header(level + 1) + "Simple\n"             + expr->toString(level + 2); break;
+        case Type::SubExprReference          : result += header(level + 1) + "Reference\n"          + expr->toString(level + 2); break;
+        case Type::SubExprNonCapture         : result += header(level + 1) + "NonCapture\n"         + expr->toString(level + 2); break;
+        case Type::SubExprPositiveLookahead  : result += header(level + 1) + "PositiveLookahead\n"  + expr->toString(level + 2); break;
+        case Type::SubExprNegativeLookahead  : result += header(level + 1) + "NegativeLookahead\n"  + expr->toString(level + 2); break;
+        case Type::SubExprPositiveLookbehind : result += header(level + 1) + "PositiveLookbehind\n" + expr->toString(level + 2); break;
+        case Type::SubExprNegativeLookbehind : result += header(level + 1) + "NegativeLookbehind\n" + expr->toString(level + 2); break;
+
+        case Type::SubExprMatchName:
+        {
+            result += header(level + 1);
+            result += "Match Name '";
+            result += Unicode::toString(name);
+            result += "'\n";
+            break;
+        }
     }
 
-    result += expr->toString(level + 2);
     return result;
 }
 
@@ -176,6 +184,22 @@ std::string FastRegExp::AST::Character::toString(size_t level) const noexcept
         {
             result += "Reference \n";
             result += reference->toString(level + 1);
+            break;
+        }
+
+        case Type::CharacterMatchName:
+        {
+            result += "Match Name '";
+            result += Unicode::toString(name);
+            result += "'\n";
+            break;
+        }
+
+        case Type::CharacterMatchIndex:
+        {
+            result += "Match Index ";
+            result += std::to_string(index);
+            result += "\n";
             break;
         }
     }
