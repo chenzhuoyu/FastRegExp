@@ -175,13 +175,13 @@ std::shared_ptr<AST::Range> Parser::parseRange(void)
         if (!skipIf<U'-'>())
         {
             /* single character */
-            result->items.push_back(std::make_pair(std::move(lower), std::move(upper)));
+            result->items.emplace_back(std::move(lower), std::move(upper));
         }
         else if (peek() != U']')
         {
             /* lower bounds and upper bounds */
             upper = parseCharacter();
-            result->items.push_back(std::make_pair(std::move(lower), std::move(upper)));
+            result->items.emplace_back(std::move(lower), std::move(upper));
         }
         else
         {
@@ -190,8 +190,8 @@ std::shared_ptr<AST::Range> Parser::parseRange(void)
             upper->character = U'-';
 
             /* 2 discrete characters */
-            result->items.push_back(std::make_pair(std::move(lower), std::shared_ptr<AST::Character>(nullptr)));
-            result->items.push_back(std::make_pair(std::move(upper), std::shared_ptr<AST::Character>(nullptr)));
+            result->items.emplace_back(std::move(lower), nullptr);
+            result->items.emplace_back(std::move(upper), nullptr);
         }
     } while (peek() != U']');
 
@@ -346,7 +346,7 @@ std::shared_ptr<AST::SubExpr> Parser::parseSubExpr(void)
                         result->expr = parseRegExp(U')');
 
                         _groups.push_back(result->expr);
-                        _namedGroups.insert(std::make_pair(std::move(name), result->expr));
+                        _namedGroups.emplace(std::move(name), result->expr);
                         break;
                     }
 
