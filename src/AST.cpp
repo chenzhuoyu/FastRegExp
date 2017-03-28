@@ -25,21 +25,25 @@ static inline std::string header(size_t count)
     return result;
 }
 
-std::string FastRegExp::AST::RegExp::toString(size_t level) const noexcept
+namespace FastRegExp
+{
+namespace AST
+{
+std::string RegExp::toString(size_t level) const noexcept
 {
     std::string result = header(level) + "RegExp\n";
     std::for_each(sections.begin(), sections.end(), [&](auto x){ result += x->toString(level + 1); });
     return result;
 }
 
-std::string FastRegExp::AST::Section::toString(size_t level) const noexcept
+std::string Section::toString(size_t level) const noexcept
 {
     std::string result = header(level) + "Section\n";
     std::for_each(elements.begin(), elements.end(), [&](auto x){ result += x->toString(level + 1); });
     return result;
 }
 
-std::string FastRegExp::AST::Elementry::toString(size_t level) const noexcept
+std::string Elementry::toString(size_t level) const noexcept
 {
     std::string result = header(level) + "Elementry\n";
 
@@ -86,7 +90,7 @@ std::string FastRegExp::AST::Elementry::toString(size_t level) const noexcept
     return result;
 }
 
-std::string FastRegExp::AST::Range::toString(size_t level) const noexcept
+std::string Range::toString(size_t level) const noexcept
 {
     std::string result = header(level)
         + (isInverted ? "Range Inverted " : "Range ")
@@ -117,7 +121,7 @@ std::string FastRegExp::AST::Range::toString(size_t level) const noexcept
     return result;
 }
 
-std::string FastRegExp::AST::SubExpr::toString(size_t level) const noexcept
+std::string SubExpr::toString(size_t level) const noexcept
 {
     std::string result = header(level) + "Sub-expression\n";
 
@@ -144,7 +148,7 @@ std::string FastRegExp::AST::SubExpr::toString(size_t level) const noexcept
     return result;
 }
 
-std::string FastRegExp::AST::Character::toString(size_t level) const noexcept
+std::string Character::toString(size_t level) const noexcept
 {
     std::string result = header(level);
 
@@ -206,3 +210,4 @@ std::string FastRegExp::AST::Character::toString(size_t level) const noexcept
 
     return result;
 }
+}}
